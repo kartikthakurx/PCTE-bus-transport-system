@@ -1,0 +1,373 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>PCTE Transport | Routes</title>
+
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+
+  <style>
+    :root {
+      --bg: #0d111c;
+      --card: rgba(255,255,255,0.07);
+      --border: rgba(255,255,255,0.1);
+      --accent: #09FBD3;
+      --text: #eaeaea;
+    }
+
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 18px;
+      line-height: 1.65;
+      overflow: hidden;
+    }
+
+    nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 22px;
+      background: linear-gradient(90deg, #0b1020aa, #0f1424cc);
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(12px);
+    }
+
+    nav div:first-child {
+      font-weight: 700;
+      font-size: 1.3rem;
+    }
+
+    nav a {
+      color: var(--text);
+      text-decoration: none;
+      padding: 8px 12px;
+      border-radius: 10px;
+      transition: background .2s;
+      font-size: 1rem;
+    }
+
+    nav a:hover {
+      background: rgba(255,255,255,.1);
+    }
+
+    .wrap {
+      max-width: 1800px;
+      margin: 0 auto;
+      padding: 0 16px;
+    }
+
+    h1 {
+      margin: 12px 0;
+      color: var(--accent);
+      text-align: left;
+      letter-spacing: .8px;
+      font-size: 2.1rem;
+      padding-left: 8px;
+    }
+
+    .main {
+      height: calc(100vh - 74px - 48px);
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: 16px;
+      align-items: stretch;
+      height: 100%;
+    }
+
+    .side {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 18px;
+      backdrop-filter: blur(10px);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    .side h2 {
+      margin: 0 0 12px;
+      font-size: 1.25rem;
+      color: #bffcf3;
+    }
+
+    .search {
+      width: 100%;
+      padding: 14px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: #0a0f1a;
+      color: var(--text);
+      margin-bottom: 12px;
+      font-size: 1.05rem;
+    }
+
+    #list {
+      overflow: auto;
+      padding-right: 4px;
+      flex: 1;
+      min-height: 0;
+    }
+
+    #list div {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 10px 0;
+      padding: 12px 14px;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: .2s;
+      background: rgba(255,255,255,.06);
+      border: 1px solid transparent;
+      font-size: 1.05rem;
+    }
+
+    #list div:hover {
+      background: rgba(255,255,255,.12);
+    }
+
+    #list div.active {
+      border: 1px solid var(--accent);
+      background: rgba(9,251,211,.08);
+    }
+
+    .dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 3px;
+      flex: 0 0 12px;
+    }
+
+    .code {
+      margin-left: auto;
+      opacity: .9;
+      font-weight: 600;
+    }
+
+    .content {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 18px;
+      backdrop-filter: blur(10px);
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    #routeTitle {
+      margin: 0 0 10px;
+      font-size: 1.4rem;
+    }
+
+    .pill {
+      display: inline-block;
+      padding: 8px 14px;
+      border-radius: 999px;
+      background: #ffffff14;
+      margin: 5px 8px 10px 0;
+      font-size: 1.05rem;
+    }
+
+    .map-wrap {
+      position: relative;
+      flex: 1;
+      min-height: 0;
+    }
+
+    #map {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      border-radius: 12px;
+      outline: 1px solid var(--border);
+    }
+
+    @media(max-width:1000px) {
+      body { overflow: auto; }
+      .main { height: auto; }
+      .layout { grid-template-columns: 1fr; }
+      .content { min-height: 60vh; }
+    }
+  </style>
+</head>
+
+<body>
+  <nav>
+    <div>PCTE Transport</div>
+    <div>
+      <a href="timetable.html">Timetable</a>
+      <a href="routes.html">Routes</a>
+      <a href="login.html" id="authLink">Login</a>
+    </div>
+  </nav>
+
+  <div class="wrap">
+    <h1>Bus Routes</h1>
+    <div class="main">
+      <div class="layout">
+        <aside class="side">
+          <h2>Search</h2>
+          <input id="q" class="search" placeholder="Search route or stop...">
+          <div id="list"></div>
+        </aside>
+
+        <section class="content">
+          <h2 id="routeTitle">Select a route to view on map.</h2>
+          <div id="chips"></div>
+          <div class="map-wrap"><div id="map"></div></div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API = "http://localhost:8080/api";
+    let ROUTES = [];
+    let activeId = null;
+    let map, markers = [], polyline, stopLayer;
+
+    const defaultIcon = L.icon({
+      iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+      shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+      iconSize: [25, 41],
+      iconAnchor: [12, 41],
+      popupAnchor: [1, -34],
+      shadowSize: [41, 41]
+    });
+    L.Marker.prototype.options.icon = defaultIcon;
+
+    function initMap() {
+      map = L.map('map', { zoomControl: true });
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '© OpenStreetMap'
+      }).addTo(map);
+      map.setView([30.90, 75.85], 12);
+      stopLayer = L.layerGroup().addTo(map);
+      setTimeout(() => map.invalidateSize(), 80);
+    }
+
+    async function load() {
+      try {
+        const res = await fetch(`${API}/routes`);
+        const arr = await res.json();
+        ROUTES = Array.isArray(arr) ? arr : [];
+      } catch {
+        ROUTES = [];
+      }
+
+      renderList(ROUTES);
+      if (ROUTES.length) show(ROUTES[0], 0);
+      else {
+        document.getElementById('routeTitle').textContent = "No routes yet. Ask admin to add one.";
+        document.getElementById('chips').innerHTML = `<span class="pill">Tip: create a route from admin page</span>`;
+      }
+    }
+
+    function renderList(items = ROUTES) {
+      const list = document.getElementById('list');
+      list.innerHTML = '';
+      items.forEach((r, idx) => {
+        const div = document.createElement('div');
+        if (activeId === r.id) div.classList.add('active');
+        div.innerHTML = `
+          <span class="dot" style="background:${r.colorHex || '#22c1c3'}"></span>
+          <span>${r.code || '—'} — ${r.name || 'Unnamed'}</span>
+          <span class="code">BNO.${idx + 1}</span>`;
+        div.onclick = () => show(r, idx);
+        list.appendChild(div);
+      });
+    }
+
+    document.getElementById('q').oninput = e => {
+      const q = e.target.value.toLowerCase();
+      const filtered = ROUTES.filter(r =>
+        (r.name || '').toLowerCase().includes(q) ||
+        (r.code || '').toLowerCase().includes(q)
+      );
+      renderList(filtered.length ? filtered : ROUTES);
+    };
+
+    async function show(r, idx) {
+      activeId = r.id;
+      renderList();
+      document.getElementById('routeTitle').textContent = `${r.code || ''} — ${r.name || ''}`;
+      document.getElementById('routeTitle').style.color = r.colorHex || '#fff';
+      document.getElementById('chips').innerHTML = `
+        <span class="pill">Bus No.: ${r.busNo || '-'}</span>
+        <span class="pill">BNO.${(idx != null ? idx + 1 : 1)}</span>`;
+
+      markers.forEach(m => map.removeLayer(m));
+      markers = [];
+      if (polyline) {
+        map.removeLayer(polyline);
+        polyline = null;
+      }
+      stopLayer.clearLayers();
+
+      try {
+        const gj = r.geometryGeoJson ? JSON.parse(r.geometryGeoJson) : null;
+        if (gj && gj.type === 'LineString' && Array.isArray(gj.coordinates)) {
+          const path = gj.coordinates.map(([lng, lat]) => [lat, lng]);
+          if (path.length) {
+            polyline = L.polyline(path, { color: r.colorHex || '#22c1c3', weight: 4, opacity: .9 }).addTo(map);
+            const start = L.circleMarker(path[0], { radius: 6, color: '#2dd4bf', fillColor: '#2dd4bf', fillOpacity: 1 }).addTo(map);
+            const end = L.circleMarker(path[path.length - 1], { radius: 6, color: '#22d3ee', fillColor: '#22d3ee', fillOpacity: 1 }).addTo(map);
+            markers.push(start, end);
+            await loadStops(r.id);
+            map.fitBounds(polyline.getBounds(), { padding: 0 });
+            setTimeout(() => map.invalidateSize(), 30);
+            return;
+          }
+        }
+      } catch (_) { }
+
+      map.setView([30.90, 75.85], 12);
+    }
+
+    async function loadStops(routeId) {
+      stopLayer.clearLayers();
+      try {
+        const res = await fetch(`${API}/routes/${routeId}/stops`);
+        if (!res.ok) return;
+        const stops = await res.json();
+        (stops || []).forEach((s, i) => {
+          L.marker([s.lat, s.lng]).addTo(stopLayer)
+            .bindPopup(`${i + 1}. ${s.name || 'Stop'}<br>(${Number(s.lat).toFixed(5)}, ${Number(s.lng).toFixed(5)})`);
+        });
+      } catch (_) { }
+    }
+
+    (function () {
+      const link = document.getElementById('authLink');
+      const logged = !!localStorage.getItem('user_logged');
+      if (logged) {
+        link.textContent = 'Logout';
+        link.href = '#';
+        link.onclick = e => {
+          e.preventDefault();
+          localStorage.removeItem('user_logged');
+          location.href = 'index.html';
+        };
+      }
+    })();
+
+    initMap();
+    load();
+  </script>
+</body>
+</html>

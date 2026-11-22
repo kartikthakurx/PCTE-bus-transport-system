@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Admin | Dashboard</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg: #0f1118;
+      --panel: #121826;
+      --card: #161d2f;
+      --border: #1f2a44;
+      --text: #e5e7eb;
+      --muted: #9aa4b2;
+      --accent: #09FBD3;
+      --accent2: #6C63FF;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, system-ui;
+      display: flex;
+      min-height: 100vh;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      width: 240px;
+      background: var(--panel);
+      border-right: 1px solid var(--border);
+      padding: 20px 14px;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+    }
+
+    .brand {
+      font-weight: 800;
+      font-size: 18px;
+      margin-bottom: 14px;
+    }
+
+    .nav a {
+      display: block;
+      padding: 12px 12px;
+      border-radius: 10px;
+      color: var(--text);
+      text-decoration: none;
+      margin: 4px 0;
+    }
+
+    .nav a.active,
+    .nav a:hover {
+      background: #1b2437;
+    }
+
+    /* Main area */
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      background: var(--panel);
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(220px, 1fr));
+      gap: 16px;
+      padding: 18px;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 16px;
+    }
+
+    .card h3 {
+      margin: 0 0 6px 0;
+      font-size: 14px;
+      color: var(--muted);
+    }
+
+    .num {
+      font-size: 28px;
+      font-weight: 800;
+    }
+
+    .grid {
+      padding: 0 18px 22px;
+    }
+
+    .panel {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+    }
+
+    .panel h4 {
+      margin: 0;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      font-size: 16px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th, td {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+    }
+
+    th {
+      color: var(--muted);
+      font-weight: 600;
+      background: #141b2c;
+    }
+
+    .quick {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      padding: 16px;
+    }
+
+    .btn {
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      text-decoration: none;
+      color: var(--text);
+      background: #1b2437;
+    }
+
+    .btn.primary {
+      background: linear-gradient(90deg, var(--accent2), var(--accent));
+      border: 0;
+      color: #06111b;
+      font-weight: 800;
+    }
+
+    @media (max-width: 1000px) {
+      .cards { grid-template-columns: 1fr; }
+      .sidebar {
+        position: fixed;
+        transform: translateX(-100%);
+        transition: .3s;
+        z-index: 10;
+      }
+      .sidebar.open { transform: none; }
+      .menu { display: inline-block; }
+    }
+
+    .menu {
+      display: none;
+      padding: 8px 12px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: #1b2437;
+      color: var(--text);
+    }
+  </style>
+</head>
+
+<body>
+  <aside class="sidebar" id="side">
+    <div class="brand">PCTE Transport</div>
+    <nav class="nav">
+      <a href="dashboard.html" class="active">Dashboard</a>
+      <a href="routes.html">Routes</a>
+      <a href="timetable.html">Timetable</a>
+      <a href="users.html">Users</a>
+      <a href="../frontend/index.html">Logout</a>
+    </nav>
+  </aside>
+
+  <section class="main">
+    <div class="topbar">
+      <h2 style="margin:0">Dashboard</h2>
+      <button class="menu" onclick="document.getElementById('side').classList.toggle('open')">Menu</button>
+    </div>
+
+    <!-- KPI cards -->
+    <div class="cards">
+      <div class="card">
+        <h3>Total Routes</h3>
+        <div class="num" id="k_routes">—</div>
+      </div>
+      <div class="card">
+        <h3>Total Stops</h3>
+        <div class="num" id="k_stops">—</div>
+      </div>
+      <div class="card">
+        <h3>Total Admins</h3>
+        <div class="num" id="k_admins">—</div>
+      </div>
+    </div>
+
+    <div class="grid">
+
+
+      <!-- Quick actions -->
+      <div class="panel">
+        <h4>Quick Actions</h4>
+        <div class="quick">
+          <a class="btn primary" href="routes.html">Add Route</a>
+          <a class="btn" href="timetable.html">Edit Timetables</a>
+          <a class="btn" href="users.html">Manage Users</a>
+          <a class="btn" href="../frontend/timetable.html">View Public Timetable</a>
+          <a class="btn" href="../frontend/routes.html">View Public Routes</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    const API = "http://localhost:8080/api";
+
+    // Counts without /count endpoints
+    async function loadKPIs() {
+      try {
+        const [routesRes, usersRes] = await Promise.all([
+          fetch(`${API}/routes`),
+          fetch(`${API}/users`)
+        ]);
+
+        const routes = routesRes.ok ? await routesRes.json() : [];
+        const users = usersRes.ok ? await usersRes.json() : [];
+
+        // Stops: sum of stops per route using /routes/{id}/stops
+        let stopsCount = 0;
+        await Promise.all((routes || []).map(async r => {
+          const sres = await fetch(`${API}/routes/${r.id}/stops`);
+          if (sres.ok) {
+            const arr = await sres.json();
+            stopsCount += Array.isArray(arr) ? arr.length : 0;
+          }
+        }));
+
+        document.getElementById('k_routes').textContent = routes.length;
+        document.getElementById('k_stops').textContent = stopsCount;
+        document.getElementById('k_admins').textContent =
+          (users || []).filter(u => String(u.role || '').toUpperCase() === 'ADMIN').length;
+      } catch (e) {
+        document.getElementById('k_routes').textContent = '0';
+        document.getElementById('k_stops').textContent = '0';
+        document.getElementById('k_admins').textContent = '0';
+      }
+    }
+
+
+
+    loadKPIs();
+    loadRecent();
+  </script>
+</body>
+</html>

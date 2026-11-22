@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PCTE Transport</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root{
+      --bg: linear-gradient(135deg,#0f172a,#1e293b,#334155);
+      --card-bg: rgba(255,255,255,0.08);
+      --border: rgba(255,255,255,0.15);
+      --text:#f4f4f4;
+      --accent:#4da6ff;
+      --accent-hover:#63b3ff;
+    }
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{
+      font-family:'Poppins',sans-serif;
+      background:var(--bg);
+      color:var(--text);
+      overflow-x:hidden;
+      min-height:100vh;
+      display:flex;
+      flex-direction:column;
+    }
+
+    /* Navbar */
+    nav{
+      display:flex;justify-content:space-between;align-items:center;
+      padding:16px 28px;background:rgba(0,0,0,0.25);backdrop-filter:blur(12px);
+      border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;
+    }
+    .brand{font-weight:700;font-size:1.3rem;letter-spacing:.5px;color:var(--accent)}
+    nav a{color:var(--text);text-decoration:none;margin-left:18px;font-weight:500;
+      transition:all .25s ease;padding:8px 14px;border-radius:8px}
+    nav a:hover{background:var(--accent);color:#fff;box-shadow:0 0 8px #4da6ff55}
+
+    /* Hero with background image */
+    .hero{
+      position:relative;
+      display:flex;align-items:center;justify-content:center;
+      min-height:88vh;padding:60px 10%;
+      overflow:hidden;
+    }
+    /* Background image + gradient overlay */
+    .hero::before{
+      content:"";
+      position:absolute;inset:0;
+      background:
+        linear-gradient(180deg,rgba(0,0,0,0.55),rgba(0,0,0,0.55)),
+        url('/pcte-transport/TRANSPOTATION-1.webp') center/cover no-repeat;
+      filter:saturate(1.05);
+      z-index:-2;
+    }
+    /* Subtle radial highlight */
+    .hero::after{
+      content:"";
+      position:absolute;inset:0;
+      background:radial-gradient(80rem 40rem at 20% 0%,rgba(255,255,255,0.06),transparent 60%);
+      z-index:-1;
+    }
+
+    .card{
+      max-width:720px;width:100%;
+      background:rgba(255,255,255,0.08);
+      border:1px solid var(--border);
+      border-radius:18px;padding:32px;
+      backdrop-filter:blur(10px);
+      box-shadow:0 10px 30px rgba(0,0,0,0.35);
+      text-align:left;transform:translateY(0);transition:transform .3s ease;
+    }
+    .card:hover{transform:translateY(-4px)}
+    .card h1{font-size:2rem;margin-bottom:10px;color:#fff}
+    .card p{font-size:1rem;line-height:1.6;opacity:.95}
+
+    /* Buttons row */
+    .actions{display:flex;gap:14px;margin-top:18px;flex-wrap:wrap}
+    .btn{
+      display:inline-block;padding:12px 20px;border-radius:10px;
+      text-decoration:none;font-weight:600;transition:.3s;
+    }
+    .btn-primary{background:var(--accent);color:#fff}
+    .btn-primary:hover{background:var(--accent-hover);box-shadow:0 0 10px #63b3ff88}
+    .btn-ghost{background:rgba(255,255,255,0.1);color:#fff;border:1px solid var(--border)}
+    .btn-ghost:hover{background:rgba(255,255,255,0.18)}
+
+    footer{
+      text-align:center;padding:18px;border-top:1px solid var(--border);
+      font-size:.9rem;opacity:.8;background:rgba(0,0,0,0.2);backdrop-filter:blur(8px)
+    }
+
+    @media(max-width:768px){
+      .hero{padding:36px 20px}
+      .card{padding:24px}
+      .card h1{font-size:1.6rem}
+    }
+  </style>
+</head>
+<body>
+  <nav>
+    <div class="brand">PCTE Transport</div>
+    <div>
+      <a href="timetable.html">Timetable</a>
+      <a href="routes.html">Routes</a>
+      <a href="login.html" id="authLink">Login</a>
+    </div>
+  </nav>
+
+  <section class="hero">
+    <div class="card">
+      <h1>Welcome to PCTE Transport</h1>
+      <p>Explore college bus routes, stops, and daily timetables for students and staff. Stay updated with real‑time changes and find your best route quickly.</p>
+      <div class="actions">
+        <a class="btn btn-primary" href="routes.html">View Routes</a>
+        <a class="btn btn-ghost" href="timetable.html">View Timetables</a>
+      </div>
+    </div>
+  </section>
+
+  <footer>© 2025 PCTE College | Transport Management System</footer>
+
+<script>
+const API = "http://localhost:8080/api";
+
+(function(){
+  const link = document.getElementById('authLink');
+  if(!link) return;
+  const logged = !!localStorage.getItem('user_logged');
+  if(logged){
+    link.textContent = 'Logout';
+    link.href = '#';
+    link.onclick = (e)=>{
+      e.preventDefault();
+      localStorage.removeItem('user_logged');
+      localStorage.removeItem('user_role');
+      localStorage.removeItem('user_profile');
+      location.href = 'index.html';
+    };
+  }
+})();
+
+async function login(e){
+  e.preventDefault();
+  const email = document.getElementById('email').value.trim();
+  const pass  = document.getElementById('pass').value.trim();
+  const msg   = document.getElementById('msg');
+  msg.textContent = "Checking...";
+
+  try{
+    const res = await fetch(`${API}/users/login`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ email, password: pass })
+    });
+    if(!res.ok){
+      msg.textContent = "❌ Invalid email or password.";
+      return;
+    }
+    const user = await res.json();
+    localStorage.setItem('user_logged','1');
+    localStorage.setItem('user_role', user.role || 'USER');
+    localStorage.setItem('user_profile', JSON.stringify(user));
+    msg.textContent = "✅ Login successful! Redirecting...";
+    setTimeout(()=> location.href = (user.role === 'ADMIN' ? 'admin-panel/dashboard.html' : 'index.html'), 800);
+  }catch(err){
+    msg.textContent = "❌ Network error. Is backend on 8080?";
+  }
+}
+</script>
+
+</body>
+</html>

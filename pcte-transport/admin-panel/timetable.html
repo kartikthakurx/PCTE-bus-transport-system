@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Admin | Timetable Editor</title>
+  <style>
+    :root { --bg:#0e1220; --card:#0b1020aa; --border:#ffffff22; --text:#eaeaea; --accent:#09fbd3; }
+    body{ margin:0; font-family:Inter,system-ui; background:var(--bg); color:var(--text); font-size:18px; line-height:1.65; }
+    nav{ display:flex; justify-content:space-between; align-items:center; padding:12px 16px; background:#0b1020aa; border-bottom:1px solid var(--border); backdrop-filter:blur(10px); }
+    nav a{ color:var(--text); text-decoration:none; padding:8px 10px; border-radius:10px; } nav a:hover{ background:#ffffff14; }
+    .wrap{ max-width:1600px; margin:22px auto; padding:0 16px; }
+    h1{ margin:0 0 12px; color:var(--accent); font-size:2rem; letter-spacing:.6px; }
+    .grid{ display:grid; grid-template-columns:420px 1fr; gap:18px; align-items:stretch; }
+    .card{ background:var(--card); border:1px solid var(--border); border-radius:16px; padding:18px; min-height:900px; }
+    .side{ display:flex; flex-direction:column; overflow:hidden; }
+    .search{ padding:14px; border:1px solid var(--border); border-radius:12px; background:#0a0f1a; color:var(--text); box-sizing:border-box; font-size:1.05rem; }
+    #rlist{ margin-top:12px; overflow:auto; flex:1; min-height:0; }
+    .item{ display:flex; align-items:center; gap:12px; margin:10px 0; padding:14px; border-radius:12px; cursor:pointer; background:#ffffff14; border:1px solid transparent; font-size:1.05rem; }
+    .item:hover{ background:#ffffff22; } .item.active{ border:1px solid var(--accent); background:#09fbd320; }
+    .dot{ width:14px; height:14px; border-radius:3px; background:#6c63ff; } .code{ margin-left:auto; opacity:.92; font-weight:700; }
+    .toolbar{ display:flex; gap:10px; margin-top:12px; }
+    .btn{ padding:12px 14px; border-radius:12px; border:1px solid var(--border); background:#ffffff14; color:#eaeaea; cursor:pointer; }
+    .btn.primary{ background:linear-gradient(90deg,#6c63ff,#09fbd3); border:0; color:#061018; font-weight:800; }
+    .bar{ display:grid; grid-template-columns:1.1fr 1.1fr 1fr 140px 140px 12px 120px; gap:10px; align-items:end; margin:10px 0 14px; }
+    label{ font-size:.95rem; opacity:.9; margin-bottom:6px; display:block; }
+    input,button{ padding:14px; border-radius:12px; border:1px solid var(--border); background:#0a0f1a; color:#eaeaea; box-sizing:border-box; font-size:1.05rem; min-width:0; }
+    table{ width:100%; border-collapse:collapse; background:var(--card); border:1px solid var(--border); border-radius:14px; overflow:hidden; }
+    th,td{ padding:12px 14px; border-bottom:1px solid #ffffff14; text-align:left; font-size:1.05rem; } th{ background:#111834; }
+    .rowbar{ display:grid; grid-template-columns:1fr 170px 170px 140px; gap:10px; margin-top:12px; }
+    .muted{ opacity:.85; }
+    @media (max-width:1100px){ .grid{grid-template-columns:1fr;} .card{min-height:800px;} .bar{grid-template-columns:1fr 1fr 1fr 130px 130px 8px 110px;} .rowbar{grid-template-columns:1fr 150px 150px 110px;} }
+  </style>
+</head>
+<body>
+  <nav>
+    <div>Admin - Timetable</div>
+    <div><a href="dashboard.html">Dashboard</a><a href="routes.html">Routes</a><a href="timetable.html">Timetable</a><a href="users.html">Users</a></div>
+  </nav>
+
+  <div class="wrap">
+    <h1>Timetable Editor</h1>
+    <div class="grid">
+      <aside class="card side">
+        <input id="q" class="search" placeholder="Search by code or name" />
+        <div id="rlist"></div>
+        <div class="toolbar">
+          <button class="btn primary" onclick="newBus()">+ New Bus/Route</button>
+          <button class="btn" onclick="deleteBus()">Delete</button>
+        </div>
+        <div id="smsg" class="muted" style="margin-top:6px"></div>
+      </aside>
+
+      <section class="card">
+        <div class="bar">
+          <div><label>From</label><input id="start" /></div>
+          <div><label>To</label><input id="end" /></div>
+          <div><label>Bus No.</label><input id="busNo" placeholder="PB-10-1234" /></div>
+          <div><label>Arrive Time</label><input id="arrive" placeholder="08:30" /></div>
+          <div><label>Depart Time</label><input id="depart" placeholder="15:30" /></div>
+          <div></div>
+          <div><button class="btn primary" onclick="saveMeta()">Save</button></div>
+        </div>
+
+        <table>
+          <thead><tr><th style="width:60px">#</th><th>Stop</th><th>Arrive</th><th>Depart</th><th style="width:160px">Actions</th></tr></thead>
+          <tbody id="tb"></tbody>
+        </table>
+
+        <div class="rowbar">
+          <input id="sname" placeholder="Stop name" />
+          <input id="sarr" placeholder="Arrive HH:MM" />
+          <input id="sdep" placeholder="Depart HH:MM" />
+          <button class="btn primary" onclick="add()">Add Row</button>
+        </div>
+
+        <div id="msg" class="muted" style="margin-top:8px"></div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    const API = "http://localhost:8080/api";
+
+    let ROUTES = [{ id:1, code:"R01", name:"Model Town - PCTE", colorHex:"#6C63FF", busNo:"PB-10-1234",
+      timetable:{ startFrom:"Model Town", endAt:"PCTE College", arriveAtCollege:"08:30", departFromCollege:"15:30", stops:[] } }];
+
+    let currentId = (ROUTES.length ? ROUTES[0].id : null);
+
+    const q = document.getElementById("q");
+    const rlist = document.getElementById("rlist");
+    const tb = document.getElementById("tb");
+    const msg = document.getElementById("msg");
+    const smsg = document.getElementById("smsg");
+    const fld = id => document.getElementById(id);
+    const setMsg = (t, side=false) => (side ? smsg : msg).textContent = t || "";
+
+    async function loadRoutes(){
+      try{
+        const res = await fetch(`${API}/routes`);
+        const arr = await res.json();
+        if(Array.isArray(arr) && arr.length) ROUTES = arr.map(r => ({...r, timetable: r.timetable || {}}));
+        currentId = (ROUTES.length ? ROUTES[0].id : null);
+      }catch(e){}
+      renderList(); renderDetail();
+    }
+
+    function routeById(id){ return ROUTES.find(r => String(r.id) === String(id)); }
+    function current(){ return routeById(currentId); }
+
+    function renderList(list=ROUTES){
+      rlist.innerHTML = "";
+      list.forEach(r=>{
+        const from = r.fromPlace || (r.timetable && r.timetable.startFrom) || "";
+        const to = r.toPlace || (r.timetable && r.timetable.endAt) || "";
+        const label = (from || to) ? `${from || ""} — ${to || ""}` : (r.name || "");
+        const div = document.createElement("div");
+        div.className = "item" + (String(r.id)===String(currentId) ? " active": "");
+        div.innerHTML = `<span class="dot" style="background:${r.colorHex||"#6C63FF"}"></span>
+                         <span>${r.code || ("R"+String(r.id).padStart(2,"0"))} — ${label}</span>
+                         <span class="code">${r.busNo || ""}</span>`;
+        div.onclick = ()=>{ currentId=r.id; renderList(); renderDetail(); };
+        rlist.appendChild(div);
+      });
+    }
+
+    q.oninput = e=>{
+      const t=e.target.value.toLowerCase();
+      const f=ROUTES.filter(r=> (r.name||"").toLowerCase().includes(t) || (r.code||"").toLowerCase().includes(t) || (r.busNo||"").toLowerCase().includes(t));
+      renderList(f.length?f:ROUTES);
+    };
+
+    async function renderDetail(){
+      const r = current(); if(!r){ tb.innerHTML=""; return; }
+      fld("start").value = r.fromPlace || (r.timetable && r.timetable.startFrom) || "";
+      fld("end").value = r.toPlace || (r.timetable && r.timetable.endAt) || "";
+      fld("busNo").value = r.busNo || "";
+      fld("arrive").value = r.arriveAtCollege || (r.timetable && r.timetable.arriveAtCollege) || "";
+      fld("depart").value = r.departAtCollege || (r.timetable && r.timetable.departFromCollege) || "";
+
+      tb.innerHTML="";
+      try{
+        const res = await fetch(`${API}/routes/${r.id}/stops`);
+        const arr = await res.json();
+        r.timetable = r.timetable || {};
+        r.timetable.stops = (arr||[]).map(s=>({ id:s.id, name:s.name, arrival:s.arrival||"", departure:s.departure||"", lat:s.lat, lng:s.lng }));
+      }catch(e){
+        r.timetable = r.timetable || {}; r.timetable.stops = r.timetable.stops || [];
+      }
+      (r.timetable.stops||[]).forEach((s,i)=> tb.appendChild(row(i,s)));
+      setMsg("");
+    }
+
+    function row(i,s){
+      const tr=document.createElement("tr");
+      tr.innerHTML = `
+        <td>${i+1}</td>
+        <td><input value="${s.name||""}" data-k="name" oninput="updateStop(${i},'name',this.value)"></td>
+        <td><input value="${s.arrival||""}" data-k="arrival" oninput="updateStop(${i},'arrival',this.value)"></td>
+        <td><input value="${s.departure||""}" data-k="departure" oninput="updateStop(${i},'departure',this.value)"></td>
+        <td>
+          <a href="#" onclick="editStop(${i});return false;" style="color:#09FBD3;margin-right:12px;">Edit</a>
+          <a href="#" onclick="removeStop(${i});return false;" style="color:#ff7b7b;">Remove</a>
+        </td>`;
+      return tr;
+    }
+
+    function ensureTT(){ const r=current(); r.timetable=r.timetable||{}; r.timetable.stops=r.timetable.stops||[]; return r.timetable; }
+    function updateStop(i,k,v){ const tt=ensureTT(); if(!tt.stops[i]) tt.stops[i]={name:"",arrival:"",departure:""}; tt.stops[i][k]=v; }
+
+    async function editStop(i){
+      const r=current(); const s=r.timetable.stops[i];
+      if(!s || !s.id){ setMsg("Save & reload route first, then edit."); return; }
+      const row=tb.querySelectorAll("tr")[i];
+      const name=row.querySelector('input[data-k="name"]').value.trim();
+      const arrival=row.querySelector('input[data-k="arrival"]').value.trim();
+      const departure=row.querySelector('input[data-k="departure"]').value.trim();
+      try{
+        const res=await fetch(`${API}/routes/${r.id}/stops/${s.id}`,{
+          method:"PUT", headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({ name, arrival, departure, lat: (typeof s.lat==="number"?s.lat:0), lng:(typeof s.lng==="number"?s.lng:0), orderIndex:i+1 })
+        });
+        if(!res.ok) throw 0; setMsg("Stop updated"); await renderDetail();
+      }catch(e){ setMsg("Failed to update stop"); }
+    }
+
+    async function removeStop(i){
+      const r=current(); const s=r.timetable.stops[i];
+      if(!s || !s.id){ setMsg("Reload before remove"); return; }
+      if(!confirm(`Remove stop "${s.name}"?`)) return;
+      try{
+        const res=await fetch(`${API}/routes/${r.id}/stops/${s.id}`,{ method:"DELETE" });
+        if(!res.ok) throw 0; setMsg("Stop removed"); await renderDetail();
+      }catch(e){ setMsg("Failed to remove stop"); }
+    }
+
+    async function add(){
+      const s={ name: fld("sname").value.trim(), arrival: fld("sarr").value.trim(), departure: fld("sdep").value.trim() };
+      if(!s.name) return alert("Stop name required");
+      const tt=ensureTT(); const r=current(); const orderIndex=(tt.stops?.length||0)+1;
+      try{
+        const resp=await fetch(`${API}/routes/${r.id}/stops`,{
+          method:"POST", headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({ name:s.name, lat:0, lng:0, orderIndex, arrival:s.arrival||"", departure:s.departure||"" })
+        });
+        if(!resp.ok) throw 0; await renderDetail();
+        ["sname","sarr","sdep"].forEach(id=>fld(id).value=""); setMsg("Stop added and saved");
+      }catch(e){ setMsg("Error saving stop"); }
+    }
+
+    function newBus(){
+      const nextNum=(ROUTES.reduce((m,r)=>Math.max(m,parseInt(String(r.code||"R00").replace(/\D/g,"")||0)),0)+1);
+      const code="R"+String(nextNum).padStart(2,"0");
+      const obj={ id:Date.now(), code, name:"New Route", colorHex:"#6C63FF", busNo:"", timetable:{ startFrom:"", endAt:"", arriveAtCollege:"", departFromCollege:"", stops:[] } };
+      ROUTES.unshift(obj); currentId=obj.id; renderList(); renderDetail(); setMsg("New bus/route created (not saved yet)",true);
+    }
+
+async function deleteBus() {
+  const r = current();
+  if (!r) return;
+  if (!confirm(`Delete ${r.code}? This removes the route and all its stops from the database.`)) return;
+
+  try {
+    const url = `${API}/routes/${r.id}`;
+    console.log("DELETE", url);
+
+    const res = await fetch(url, { method: "DELETE" });
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      setMsg(`Delete failed (${res.status}) ${text || ""}`);
+      console.error("Delete failed:", res.status, text);
+      return;
+    }
+
+    // Remove locally, then re-fetch from DB so refresh won’t bring it back
+    ROUTES = ROUTES.filter(x => String(x.id) !== String(r.id));
+    currentId = (Array.isArray(ROUTES) && ROUTES.length) ? ROUTES[0].id : null;
+
+    await loadRoutes();
+    setMsg("Deleted", true);
+  } catch (e) {
+    console.error("Delete error:", e);
+    setMsg("Delete failed — ensure backend is running on 8080");
+  }
+}
+
+
+
+
+
+    async function saveMeta(){
+      const r=current(); if(!r) return;
+      const payload={ busNo:fld("busNo").value.trim(), startFrom:fld("start").value.trim(), endAt:fld("end").value.trim(),
+        arriveAtCollege:fld("arrive").value.trim(), departFromCollege:fld("depart").value.trim(),
+        stops:(r.timetable && r.timetable.stops) ? r.timetable.stops : [] };
+      r.busNo=payload.busNo; r.timetable={...(r.timetable||{}), ...payload};
+      try{
+        const routeName=(payload.startFrom && payload.endAt)?`${payload.startFrom} - ${payload.endAt}`:(r.name||""); r.name=routeName;
+        if(String(r.id).length>10){
+          const cr=await fetch(`${API}/routes`,{method:"POST",headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({ code:r.code, name:routeName, colorHex:r.colorHex, busNo:payload.busNo,
+              geometryGeoJson:r.geometryGeoJson||"{}", fromPlace:payload.startFrom, toPlace:payload.endAt,
+              arriveAtCollege:payload.arriveAtCollege, departAtCollege:payload.departFromCollege })});
+          if(!cr.ok) throw 0; const saved=await cr.json(); r.id=saved.id; currentId=r.id;
+        }else{
+          const up=await fetch(`${API}/routes/${r.id}`,{method:"PUT",headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({ code:r.code, name:routeName, colorHex:r.colorHex, busNo:payload.busNo,
+              geometryGeoJson:r.geometryGeoJson||"{}", fromPlace:payload.startFrom, toPlace:payload.endAt,
+              arriveAtCollege:payload.arriveAtCollege, departAtCollege:payload.departFromCollege })});
+          if(!up.ok) throw 0;
+        }
+        await fetch(`${API}/routes/${r.id}/stops`,{method:"DELETE"});
+        for(const [i,s] of payload.stops.entries()){
+          const lat=typeof s.lat==="number"?s.lat:0; const lng=typeof s.lng==="number"?s.lng:0;
+          const resp=await fetch(`${API}/routes/${r.id}/stops`,{method:"POST",headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({ name:s.name, lat, lng, orderIndex:i+1, arrival:s.arrival||"", departure:s.departure||"" })});
+          if(!resp.ok) throw 0;
+        }
+        setMsg("Saved"); renderList(); await renderDetail();
+      }catch(e){ setMsg("Failed to save — check backend running on 8080 and CORS"); }
+    }
+
+    loadRoutes();
+  </script>
+</body>
+</html>
+

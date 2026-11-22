@@ -1,0 +1,6 @@
+make-hash.txt
+database.sql
+pcte-transport/backend/target/
+pcte-transport/backend/venv/
+.idea/
+.vscode/

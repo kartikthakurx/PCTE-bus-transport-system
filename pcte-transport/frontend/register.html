@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>User Register | PCTE Transport</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Inter, system-ui;
+      background: #0f0f1a;
+      color: #eaeaea;
+    }
+
+    nav {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      background: #0b1020aa;
+      border-bottom: 1px solid #ffffff22;
+      position: sticky;
+      top: 0;
+      backdrop-filter: blur(10px);
+    }
+
+    nav a {
+      color: #eaeaea;
+      text-decoration: none;
+      padding: 8px 10px;
+      border-radius: 10px;
+    }
+
+    nav a:hover {
+      background: #ffffff14;
+    }
+
+    .brand {
+      font-weight: 800;
+    }
+
+    .container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 80vh;
+      padding: 24px;
+    }
+
+    .card {
+      width: min(460px, 92vw);
+      background: #0b1020aa;
+      border: 1px solid #ffffff22;
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 0 20px #00000040;
+    }
+
+    h2 {
+      margin: 0 0 12px 0;
+      text-align: center;
+      background: linear-gradient(90deg, #6C63FF, #09FBD3);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    input, button {
+      width: 100%;
+      padding: 12px;
+      margin: 8px 0;
+      border-radius: 10px;
+      border: 1px solid #ffffff22;
+      background: #0a0f1a;
+      color: #eaeaea;
+      font-size: 15px;
+    }
+
+    button {
+      background: linear-gradient(90deg, #6C63FF, #09FBD3);
+      color: #081018;
+      font-weight: 700;
+      border: none;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    button:hover {
+      transform: scale(1.02);
+      box-shadow: 0 0 12px #09FBD344;
+    }
+
+    a {
+      color: #09FBD3;
+      text-decoration: none;
+    }
+
+    #msg {
+      color: #09FBD3;
+      font-size: 14px;
+      margin-top: 8px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="brand">PCTE Transport</div>
+  <div>
+    <a href="index.html">Home</a>
+    <a href="timetable.html">Timetable</a>
+    <a href="routes.html">Routes</a>
+    <a href="login.html" id="authLink">Login</a>
+  </div>
+</nav>
+
+<section class="container">
+  <div class="card">
+    <h2>Create Account</h2>
+    <form id="regForm" onsubmit="reg(event)">
+      <input id="name" placeholder="Full name" required>
+      <input id="email" type="email" placeholder="Email" required>
+      <input id="pass" type="password" placeholder="Password" required minlength="6">
+      <button type="submit">Register</button>
+    </form>
+    <div style="text-align:center;">Already have an account? <a href="login.html">Login</a></div>
+    <p id="msg"></p>
+  </div>
+</section>
+
+<script>
+const API = "http://localhost:8080/api";
+
+(function(){
+  const link = document.getElementById('authLink');
+  if(!link) return;
+  const logged = !!localStorage.getItem('user_logged');
+  if(logged){
+    link.textContent = 'Logout';
+    link.href = '#';
+    link.onclick = (e)=>{
+      e.preventDefault();
+      localStorage.removeItem('user_logged');
+      localStorage.removeItem('user_role');
+      localStorage.removeItem('user_profile');
+      location.href = 'index.html';
+    };
+  }
+})();
+
+const val = id => document.getElementById(id).value.trim();
+const set = t => document.getElementById('msg').textContent = t;
+
+async function reg(e){
+  e.preventDefault();
+  const name = val('name'), email = val('email'), pass = val('pass');
+  if(!name || !email || !pass){ return set('⚠️ Please fill all fields!'); }
+  set('Saving...');
+
+  try{
+    const res = await fetch(`${API}/users`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, email, password: pass, role: 'USER' })
+    });
+    if(!res.ok){
+      const txt = await res.text();
+      set('❌ Failed to register: ' + (txt || 'Email may already exist.'));
+      return;
+    }
+    set('✅ Account created! Redirecting to login...');
+    setTimeout(()=> location.href='login.html', 900);
+  }catch(err){
+    set('❌ Network error. Is backend running on 8080?');
+  }
+}
+</script>
+
+
+
+</body>
+</html>

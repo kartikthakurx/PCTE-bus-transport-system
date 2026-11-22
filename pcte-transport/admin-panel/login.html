@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Admin Login | PCTE Transport</title>
+<style>
+  :root{--bg:#0e1220;--card:#0b1020aa;--border:#ffffff22;--text:#eaeaea;--accent:#09FBD3;--accent2:#6C63FF}
+  body{margin:0;display:grid;place-items:center;min-height:100vh;background:var(--bg);color:var(--text);font-family:Inter,system-ui}
+  .card{width:min(420px,92vw);background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px;box-shadow:0 10px 40px #0006}
+  h2{margin:0 0 10px}
+  label{display:block;margin:10px 0 6px;opacity:.9}
+  input{width:100%;padding:12px;border-radius:10px;border:1px solid var(--border);background:#0a0f1a;color:var(--text);box-sizing:border-box}
+  .btn{width:100%;padding:12px;margin-top:10px;border-radius:10px;border:none;background:linear-gradient(90deg,var(--accent2),var(--accent));color:#081018;font-weight:800;cursor:pointer}
+  .row{display:flex;gap:10px;margin-top:10px}
+  .ghost{flex:1;padding:12px;border-radius:10px;border:1px solid var(--border);background:#ffffff14;color:var(--text);cursor:pointer}
+  .err{color:#ff8e8e;min-height:20px;margin-top:8px}
+  .foot{margin-top:10px;display:flex;justify-content:space-between;opacity:.85}
+  a{color:var(--accent);text-decoration:none}
+</style>
+</head>
+<body>
+<div class="card">
+  <h2>Admin Login</h2>
+  <label>Email</label>
+  <input id="email" type="email" placeholder="admin@pcte.edu.in" autocomplete="username">
+  <label>Password</label>
+  <input id="pass" type="password" placeholder="••••••••" autocomplete="current-password">
+
+  <button class="btn" onclick="login()">Login</button>
+  <div class="row">
+
+    <a class="ghost" href="../frontend/index.html" style="text-align:center;line-height:20px">Back to site</a>
+  </div>
+
+  <div id="err" class="err"></div>
+  <div class="foot"><span>Authorized staff only</span><span>PCTE Transport</span></div>
+</div>
+
+<script>
+const API = "http://localhost:8080/api";
+const DASH = 'dashboard.html';
+
+function val(id){ return document.getElementById(id).value.trim(); }
+function setErr(t){ let e=document.getElementById('err'); if(!e){ e=document.createElement('div'); e.id='err'; e.style.color='#ff8c8c'; e.style.marginTop='8px'; document.querySelector('.card').appendChild(e);} e.textContent=t||''; }
+
+async function login(){
+  setErr('');
+  const email = val('email');
+  const pass  = val('pass');
+  if(!email || !pass){ return setErr('Please enter email and password.'); }
+
+  try{
+    const res = await fetch(`${API}/users/login`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ email, password: pass })
+    });
+    if(!res.ok){ return setErr('Invalid credentials.'); }
+    const user = await res.json();
+    if((user.role||'').toUpperCase() !== 'ADMIN'){
+      return setErr('Not an admin account.');
+    }
+    localStorage.setItem('admin_token','ok'); // simple flag for now
+    localStorage.setItem('user_profile', JSON.stringify(user));
+    location.href = DASH;
+  }catch(err){
+    setErr('Network error. Is backend running on 8080?');
+  }
+}
+</script>
+
+
+</body>
+</html>

@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Admin | Route Editor</title>
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css">
+
+  <style>
+    :root{ --bg:#0e1220; --card:#0b1020aa; --border:#ffffff22; --text:#eaeaea; --accent:#09FBD3; }
+    body{ margin:0; height:100vh; display:grid; grid-template-columns:380px 1fr; background:var(--bg); color:var(--text); font-family:Inter,system-ui; }
+    #panel{ padding:16px; background:var(--card); border-right:1px solid var(--border); overflow:auto; }
+    #map{ height:100vh; }
+    h2{ margin:0 0 10px; }
+    input,button,select{ width:100%; padding:12px; margin:8px 0; border-radius:12px; border:1px solid var(--border); background:#0a0f1a; color:var(--text); box-sizing:border-box; }
+    .row{ display:grid; grid-template-columns:1fr 140px; gap:8px; }
+    .btn{ border:1px solid var(--border); background:#ffffff14; color:var(--text); cursor:pointer; }
+    .btn.primary{ background:linear-gradient(90deg,#6C63FF,#09FBD3); border:0; color:#061018; font-weight:800; }
+    .muted{ opacity:.85; }
+    ul#stopList{ list-style:none; margin:8px 0 0; padding:0; border:1px solid var(--border); border-radius:12px; }
+    #stopList li{ display:flex; align-items:center; gap:8px; padding:10px; border-bottom:1px solid #ffffff14; }
+    #stopList li:last-child{ border-bottom:none; }
+    #stopList small{ opacity:.8; }
+    .pill{ display:inline-block; padding:4px 8px; border-radius:999px; background:#ffffff14; margin-left:auto; cursor:pointer; }
+  </style>
+</head>
+<body>
+  <div id="panel">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <h2>Route Editor</h2>
+    </div>
+
+    <div class="row">
+      <select id="routeSel"></select>
+      <button class="btn" onclick="reloadSelected()">Load</button>
+    </div>
+
+    <input id="name" style="display:none">
+    <input id="code" style="display:none">
+    <input id="color" type="color" value="#39c5bb" title="Route color">
+
+    <div class="row">
+      <button id="draw" class="btn">Draw / Redraw Polyline</button>
+      <button id="clearLine" class="btn">Clear Line</button>
+    </div>
+
+    <div class="row">
+      <input id="stopName" placeholder="Stop name, then click map">
+      <button id="addStop" class="btn">Add Stop</button>
+    </div>
+
+    <ul id="stopList"></ul>
+
+    <div class="row" style="margin-top:8px">
+      <button id="save" class="btn primary">Save</button>
+      <a class="btn" href="dashboard.html" style="text-align:center;display:inline-block;line-height:40px">Back</a>
+    </div>
+
+    <div id="msg" class="muted" style="margin-top:6px"></div>
+  </div>
+
+  <div id="map"></div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+
+  <script>
+    const API = 'http://localhost:8080/api';
+    const headers = { 'Content-Type': 'application/json' };
+    const params = new URLSearchParams(location.search);
+    const routeId = params.get('id');
+
+    const map = L.map('map').setView([30.9010, 75.8570], 12);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '© OpenStreetMap'
+    }).addTo(map);
+
+    let drawn = null, stops = [], markers = [], ROUTES_CACHE = [];
+
+    const msg = t => document.getElementById('msg').textContent = t || '';
+
+    function addMarker(s) {
+      const m = L.marker([s.lat, s.lng])
+        .addTo(map)
+        .bindPopup(`${stops.indexOf(s) + 1}. ${s.name}`);
+      markers.push(m);
+    }
+
+    function clearMarkers() {
+      markers.forEach(m => map.removeLayer(m));
+      markers = [];
+    }
+
+    function refreshStops() {
+      const ul = document.getElementById('stopList');
+      ul.innerHTML = '';
+      stops.forEach((s, i) => {
+        const li = document.createElement('li');
+        li.innerHTML = `
+          <strong>${i + 1}.</strong>
+          <span>${s.name}</span>
+          <small>(${s.lat.toFixed(4)}, ${s.lng.toFixed(4)})</small>
+          <span class="pill" onclick="moveUp(${i})">↑</span>
+          <span class="pill" onclick="moveDown(${i})">↓</span>
+          <span class="pill" onclick="removeStop(${i})">Remove</span>
+        `;
+        ul.appendChild(li);
+      });
+    }
+
+    function moveUp(i) {
+      if (i <= 0) return;
+      [stops[i - 1], stops[i]] = [stops[i], stops[i - 1]];
+      refreshStops();
+    }
+
+    function moveDown(i) {
+      if (i >= stops.length - 1) return;
+      [stops[i + 1], stops[i]] = [stops[i], stops[i + 1]];
+      refreshStops();
+    }
+
+    function removeStop(i) {
+      stops.splice(i, 1);
+      refreshStops();
+      clearMarkers();
+      stops.forEach(addMarker);
+    }
+
+    document.getElementById('draw').onclick = () => {
+      const ctrl = new L.Control.Draw({
+        draw: {
+          polyline: {
+            shapeOptions: {
+              color: document.getElementById('color').value,
+              weight: 5
+            }
+          },
+          marker: false,
+          polygon: false,
+          rectangle: false,
+          circle: false,
+          circlemarker: false
+        },
+        edit: false
+      });
+
+      map.addControl(ctrl);
+
+      map.once(L.Draw.Event.CREATED, e => {
+        if (drawn) map.removeLayer(drawn);
+        drawn = e.layer.addTo(map);
+        map.removeControl(ctrl);
+        msg('Line updated');
+      });
+    };
+
+    document.getElementById('clearLine').onclick = () => {
+      if (drawn) {
+        map.removeLayer(drawn);
+        drawn = null;
+        msg('Line cleared');
+      }
+    };
+
+    document.getElementById('addStop').onclick = () => {
+      const n = document.getElementById('stopName').value.trim();
+      if (!n) return alert('Enter stop name first');
+
+      const once = (ev) => {
+        const { lat, lng } = ev.latlng;
+        const s = { name: n, lat, lng };
+        stops.push(s);
+        addMarker(s);
+        refreshStops();
+        map.off('click', once);
+        document.getElementById('stopName').value = '';
+      };
+
+      map.on('click', once);
+      msg('Click on the map to place the stop');
+    };
+
+    async function loadRoutesList() {
+      try {
+        const r = await fetch(`${API}/routes`);
+        const arr = await r.json();
+        ROUTES_CACHE = Array.isArray(arr) ? arr : [];
+      } catch (e) {
+        ROUTES_CACHE = [];
+      }
+
+      const sel = document.getElementById('routeSel');
+      const opts = [
+        `<option value="">➕ New route…</option>`,
+        ...ROUTES_CACHE.map(r => `<option value="${r.id}">${r.code} — ${r.name}</option>`)
+      ];
+      sel.innerHTML = opts.join('');
+
+      if (routeId) {
+        sel.value = routeId;
+      }
+    }
+
+    loadRoutesList();
+
+    async function reloadSelected() {
+      const rid = document.getElementById('routeSel').value;
+      stops = [];
+      refreshStops();
+      clearMarkers();
+      if (drawn) {
+        map.removeLayer(drawn);
+        drawn = null;
+      }
+      document.getElementById('stopName').value = '';
+
+      if (!rid) {
+        document.getElementById('color').value = '#39c5bb';
+        msg('Creating a new route');
+        return;
+      }
+
+      try {
+        const r = await (await fetch(`${API}/routes/${rid}`)).json();
+        document.getElementById('name').value = r.name || '';
+        document.getElementById('code').value = r.code || '';
+        document.getElementById('color').value = r.colorHex || '#39c5bb';
+
+        if (r.geometryGeoJson) {
+          const gj = {
+            type: 'Feature',
+            geometry: JSON.parse(r.geometryGeoJson),
+            properties: {}
+          };
+          drawn = L.geoJSON(gj, {
+            style: { color: r.colorHex || '#39c5bb', weight: 5 }
+          }).addTo(map);
+
+          try { map.fitBounds(drawn.getBounds(), { padding: [] }); } catch (_) {}
+        }
+
+        const s = await (await fetch(`${API}/routes/${rid}/stops`)).json();
+        s.sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0))
+          .forEach(x => {
+            const st = { name: x.name, lat: x.lat, lng: x.lng };
+            stops.push(st);
+            addMarker(st);
+          });
+
+        refreshStops();
+        msg('Route loaded from list');
+      } catch (e) {
+        msg('Could not load selected route');
+      }
+    }
+
+    (async function preloadFromQuery() {
+      if (!routeId) return;
+      document.getElementById('routeSel').value = routeId;
+      await reloadSelected();
+    })();
+
+    document.getElementById('save').onclick = async () => {
+      const sel = document.getElementById('routeSel');
+      const chosenId = sel && sel.value ? sel.value : null;
+
+      if (!drawn) return alert('Draw the polyline first');
+
+      const gj = drawn.toGeoJSON();
+      const geomStr = JSON.stringify(gj.geometry);
+      let code = document.getElementById('code').value.trim();
+      let name = document.getElementById('name').value.trim();
+
+      if (!chosenId) {
+        if (!code) code = prompt('Enter route code (e.g., R03)') || '';
+        if (!name) name = prompt('Enter route name (e.g., Kohara - PCTE)') || '';
+        if (!code || !name) return alert('Code and name required for new route');
+      }
+
+      const body = {
+        code,
+        name,
+        colorHex: document.getElementById('color').value,
+        geometryGeoJson: geomStr
+      };
+
+      let rid = chosenId;
+
+      try {
+        if (chosenId) {
+          const res = await fetch(`${API}/routes/${chosenId}`, {
+            method: 'PUT',
+            headers,
+            body: JSON.stringify(body)
+          });
+          if (!res.ok) throw 0;
+        } else {
+          const res = await fetch(`${API}/routes`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(body)
+          });
+          if (!res.ok) throw 0;
+          const saved = await res.json().catch(() => ({ id: null }));
+          rid = saved.id || null;
+        }
+
+        await fetch(`${API}/routes/${rid}/stops`, { method: 'DELETE' });
+
+        for (const [i, s] of stops.entries()) {
+          await fetch(`${API}/routes/${rid}/stops`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({
+              name: s.name,
+              lat: s.lat,
+              lng: s.lng,
+              orderIndex: i + 1
+            })
+          });
+        }
+
+        alert('Saved');
+        location.href = 'routes.html';
+      } catch (e) {
+        alert('Save failed. Ensure backend is running on 8080.');
+      }
+    };
+  </script>
+</body>
+</html>

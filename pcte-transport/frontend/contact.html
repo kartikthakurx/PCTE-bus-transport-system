@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Contact | PCTE Transport</title>
+  <style>
+    :root{
+      --bg:#0f0f1a;
+      --card:#0b1020aa;
+      --border:#ffffff22;
+      --text:#eaeaea;
+      --accent1:#6C63FF;
+      --accent2:#09FBD3;
+    }
+
+    /* Full-height layout to keep footer at bottom */
+    html, body{height:100%}
+    body{
+      margin:0;
+      font-family:Inter, system-ui;
+      background:var(--bg);
+      color:var(--text);
+      display:flex;
+      flex-direction:column;
+    }
+
+    nav{
+      display:flex;gap:12px;align-items:center;justify-content:space-between;
+      padding:12px 16px;background:#0b1020aa;border-bottom:1px solid var(--border);
+      position:sticky;top:0;backdrop-filter:blur(10px);z-index:10
+    }
+    nav a{color:var(--text);text-decoration:none;padding:8px 10px;border-radius:10px}
+    nav a:hover{background:#ffffff14}
+    .brand{font-weight:800}
+
+    /* Main content grows, footer stays at bottom */
+    main{
+      flex:1;                 /* take remaining height */
+      display:flex;
+      align-items:flex-start; /* start, not center */
+    }
+
+    /* Wider container and bigger cards */
+    .wrap{
+      max-width:980px;        /* was 820px */
+      margin:40px auto 28px;  /* a bit tighter bottom to meet footer nicely */
+      padding:0 16px;
+      width:100%;
+    }
+
+h1{
+  /* Fallback solid color if gradient clip not supported */
+  color: #aee8ff;
+
+  /* Gradient text */
+  background: linear-gradient(90deg, #6C63FF, #09FBD3);
+  background-clip: text;              /* standard */
+  -webkit-background-clip: text;      /* vendor prefix for Safari/older Chromium */
+  color: transparent;                  /* standard */
+  -webkit-text-fill-color: transparent;/* vendor prefix for Safari */
+}
+
+
+    .card{
+      background:var(--card);border:1px solid #ffffff1f;border-radius:16px;
+      padding:28px;box-shadow:0 0 20px #00000040;margin-bottom:22px;
+    }
+
+    /* Larger form controls */
+    input, textarea, button{
+      width:100%;padding:14px;margin:10px 0;border-radius:12px;border:1px solid var(--border);
+      background:#0a0f1a;color:var(--text);font-size:16.5px;
+      box-sizing:border-box;
+    }
+    textarea{resize:vertical;min-height:160px}    /* was 120px */
+
+    button{
+      background:linear-gradient(90deg, var(--accent1), var(--accent2));
+      color:#081018;font-weight:800;border:none;cursor:pointer;transition:.25s
+    }
+    button:hover{transform:translateY(-1px);box-shadow:0 0 14px #09FBD344}
+
+    #status{text-align:center;margin-top:10px;font-size:15px;color:var(--accent2)}
+
+    footer{
+      text-align:center;padding:18px;border-top:1px solid var(--border);
+      font-size:14px;color:#aaa
+    }
+
+    /* Optional: compact on small screens */
+    @media (max-width: 640px){
+      .wrap{max-width:94%}
+      h1{font-size:1.8rem}
+      textarea{min-height:140px}
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="brand">PCTE Transport</div>
+  <div>
+    <a href="index.html">Home</a>
+    <a href="timetable.html">Timetable</a>
+    <a href="routes.html">Routes</a>
+    <a href="contact.html">Contact</a>
+    <a href="login.html" id="authLink">Login</a>
+  </div>
+</nav>
+
+<main>
+  <div class="wrap">
+    <h1>Contact Transport Office</h1>
+
+    <!-- Larger form card -->
+    <div class="card">
+      <form id="contactForm" onsubmit="send(event)">
+        <input id="name" placeholder="Your name" required>
+        <input id="email" type="email" placeholder="Your email" required>
+        <textarea id="msg" placeholder="Your message..." required></textarea>
+        <button type="submit">Send Message</button>
+      </form>
+      <div id="status"></div>
+    </div>
+
+    <!-- Larger info card -->
+    <div class="card">
+      <h3>Office Details</h3>
+      <p>
+        📍 <b>PCTE Group of Institutes, Ludhiana</b><br>
+        ⏰ <b>Office Hours:</b> 9:00 AM – 5:00 PM<br>
+        📞 <b>Phone:</b> +91-98765XXXXX<br>
+        ✉️ <b>Email:</b> transport@pcte.edu.in
+      </p>
+    </div>
+  </div>
+</main>
+
+<footer>© 2025 PCTE Transport • Designed for Students & Staff</footer>
+
+<script>
+function send(e){
+  e.preventDefault();
+  const p = { name: val('name'), email: val('email'), msg: val('msg'), ts: new Date().toISOString() };
+  if(!p.name || !p.email || !p.msg){ return set('⚠️ Please fill all fields!'); }
+  const arr = JSON.parse(localStorage.getItem('contactMsgs') || '[]');
+  arr.push(p);
+  localStorage.setItem('contactMsgs', JSON.stringify(arr));
+  set('✅ Message sent successfully! (Saved locally for demo)');
+  document.getElementById('contactForm').reset();
+}
+const val = id => document.getElementById(id).value.trim();
+const set = t => document.getElementById('status').textContent = t;
+
+// Logout toggle
+(function(){
+  const link = document.getElementById('authLink');
+  if(!link) return;
+  const logged = !!localStorage.getItem('user_logged');
+  if(logged){
+    link.textContent = 'Logout';
+    link.href = '#';
+    link.onclick = (e)=>{
+      e.preventDefault();
+      localStorage.removeItem('user_logged');
+      location.href = 'index.html';
+    };
+  }
+})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,239 @@
+<!--
+  File: timetable.html
+  Purpose: Display BUS TIMETABLES with searchable routes and details.
+  Updates:
+  - Sidebar search input constrained inside its card.
+  - Left list scrolls inside the card (no overflow outside).
+  - Left column widened a bit for comfortable padding.
+-->
+
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PCTE Transport | Bus Timetables</title>
+<style>
+  :root{
+    --bg:#0d111c;
+    --card:rgba(255,255,255,0.07);
+    --border:rgba(255,255,255,0.1);
+    --accent:#09FBD3;
+    --accent2:#6C63FF;
+    --text:#eaeaea;
+  }
+
+  body{
+    margin:0;
+    font-family:Inter,system-ui,sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    font-size:18px;
+    line-height:1.65;
+  }
+
+  nav{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:14px 22px;background:linear-gradient(90deg,#0b1020aa,#0f1424cc);
+    border-bottom:1px solid var(--border);backdrop-filter:blur(12px)
+  }
+  nav div:first-child{font-weight:700;font-size:1.3rem}
+  nav a{color:var(--text);text-decoration:none;padding:8px 12px;border-radius:10px;transition:background .2s;font-size:1rem}
+  nav a:hover{background:rgba(255,255,255,.1)}
+
+  .wrap{max-width:1500px;margin:34px auto;padding:0 24px}
+  h1{margin:0 0 20px;color:var(--accent);text-align:center;letter-spacing:.8px;font-size:2.1rem}
+
+  .grid{
+    display:grid;
+    grid-template-columns: 400px 1fr;  /* widened from 380px */
+    gap:24px;
+  }
+
+  .card{
+    background:var(--card);border:1px solid var(--border);
+    border-radius:16px;padding:30px;backdrop-filter:blur(10px);
+    min-height:560px;
+  }
+  .grid > .card:nth-child(2){ min-height:700px; }
+
+  /* Sidebar-specific containment so input never overflows */
+  .card.sidebar{
+    display:flex;flex-direction:column;overflow:hidden;min-height:560px;
+  }
+
+  /* Search input fits the card width */
+  .card.sidebar input{
+    width:100%;max-width:100%;box-sizing:border-box;
+    padding:15px;border-radius:12px;border:1px solid var(--border);
+    background:#0a0f1a;color:var(--text);margin-bottom:14px;font-size:1.05rem
+  }
+
+  /* Route list scrolls inside the sidebar card */
+  #list{
+    overflow:auto;padding-right:4px;flex:1;min-height:0;
+  }
+
+  #list div{
+    display:flex;align-items:center;gap:12px;
+    margin:10px 0;padding:14px 16px;border-radius:12px;cursor:pointer;transition:.2s;
+    background:rgba(255,255,255,.06);border:1px solid transparent;font-size:1.05rem
+  }
+  #list div:hover{background:rgba(255,255,255,.12)}
+  #list div.active{border:1px solid var(--accent);background:rgba(9,251,211,.08)}
+  .dot{width:13px;height:13px;border-radius:3px;flex:0 0 13px}
+  .code{margin-left:auto;opacity:.9;font-weight:600}
+
+  #info h2{margin:0 0 12px 0;font-size:1.5rem}
+  .pill{
+    display:inline-block;padding:8px 14px;border-radius:999px;background:#ffffff14;margin:5px;
+    font-size:1.05rem
+  }
+
+  table{width:100%;border-collapse:collapse;border-radius:12px;overflow:hidden}
+  th,td{padding:16px 18px;border-bottom:1px solid #ffffff14;text-align:left;font-size:1.05rem}
+  th{background:#111834;font-weight:700;letter-spacing:.2px}
+  tr:hover td{background:rgba(255,255,255,.05)}
+
+  #tableWrap{margin-top:16px}
+
+  @media(max-width:900px){
+    .grid{grid-template-columns:1fr}
+    body{font-size:16.5px}
+    .card{min-height:460px;padding:24px}
+    #info h2{font-size:1.3rem}
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div>PCTE Transport</div>
+  <div>
+    <a href="timetable.html">Timetable</a>
+    <a href="routes.html">Routes</a>
+    <a href="login.html" id="authLink">Login</a>
+  </div>
+</nav>
+
+<div class="wrap">
+  <h1>BUS TIMETABLES</h1>
+  <div class="grid">
+    <!-- Added sidebar class -->
+    <div class="card sidebar">
+      <input id="q" placeholder="Search route or code...">
+      <div id="list"></div>
+    </div>
+
+    <div class="card">
+      <div id="info">Select a route to view the timetable.</div>
+      <div id="tableWrap"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = "http://localhost:8080/api";
+let ROUTES = [];
+let activeId = null;
+
+async function load(){
+  try{
+    const res = await fetch(`${API}/routes`);
+    ROUTES = await res.json();
+  }catch(e){
+    ROUTES = [
+      { id:1, name:"Model Town - PCTE", code:"R01", colorHex:"#6C63FF", busNo:"PB-10-1234" },
+      { id:2, name:"Jagraon - PCTE",     code:"R02", colorHex:"#09FBD3", busNo:"PB-10-5678" }
+    ];
+  }
+  renderList(ROUTES);
+  if(ROUTES.length) show(ROUTES[0]);
+}
+
+function renderList(items=ROUTES){
+  const listDiv = document.getElementById("list");
+  listDiv.innerHTML = "";
+  items.forEach((r, idx)=>{
+    const div = document.createElement("div");
+    div.className = activeId===r.id ? "active" : "";
+    div.innerHTML = `
+      <span class="dot" style="background:${r.colorHex}"></span>
+      <span>${r.code} — ${r.name}</span>
+      <span class="code">BNO.${idx + 1}</span>
+    `;
+    div.onclick = ()=>show(r);
+    listDiv.appendChild(div);
+  });
+}
+
+document.getElementById("q").oninput = e=>{
+  const q = e.target.value.toLowerCase();
+  const filtered = ROUTES.filter(r =>
+    r.name.toLowerCase().includes(q) || (r.code||"").toLowerCase().includes(q)
+  );
+  renderList(filtered.length ? filtered : ROUTES);
+};
+
+async function show(r){
+  activeId = r.id;
+  renderList();
+
+  // Fetch all fields for the route
+  let routeMeta;
+  let stops = [];
+  try {
+    // Fetch route metadata
+    const metaRes = await fetch(`${API}/routes/${r.id}`);
+    routeMeta = await metaRes.json();
+
+    // Fetch stops for this route
+    const stopsRes = await fetch(`${API}/routes/${r.id}/stops`);
+    stops = await stopsRes.json();
+  } catch(e){
+    routeMeta = {};
+    stops = [];
+  }
+
+  // Use routeMeta fields for details
+  document.getElementById("info").innerHTML = `
+    <h2 style="color:${r.colorHex}">${r.code} — ${r.name}</h2>
+    <div class="pill">From: ${routeMeta.fromPlace || "-"}</div>
+    <div class="pill">To: ${routeMeta.toPlace || "-"}</div>
+    <div class="pill">Bus No.: ${routeMeta.busNo || "-"}</div>
+  `;
+
+  const rows = (stops||[])
+    .map((s,i)=>`<tr><td>${i+1}</td><td>${s.name}</td><td>${s.arrival || '-'}</td><td>${s.departure || '-'}</td></tr>`)
+    .join("");
+
+  document.getElementById("tableWrap").innerHTML = `
+    <table>
+      <thead>
+        <tr><th>#</th><th>Stops</th><th>Arrive</th><th>Depart</th></tr>
+      </thead>
+      <tbody>${rows || '<tr><td colspan="4">No data.</td></tr>'}</tbody>
+    </table>
+  `;
+}
+
+
+// Auth toggle
+(function (){
+  const link = document.getElementById("authLink");
+  const logged = !!localStorage.getItem("user_logged");
+  if(logged){
+    link.textContent = "Logout";
+    link.href = "#";
+    link.onclick = (e)=>{
+      e.preventDefault();
+      localStorage.removeItem("user_logged");
+      location.href = "index.html";
+    };
+  }
+})();
+
+load();
+</script>
+</body>
+</html>
